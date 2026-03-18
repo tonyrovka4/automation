@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Pool Proxy</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f0f2f5; display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #1a73e8; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 70%; padding: 12px 16px; border-radius: 8px; line-height: 1.4; }
+        .message.user { align-self: flex-end; background: #1a73e8; color: white; border-bottom-right-radius: 0; }
+        .message.bot { align-self: flex-start; background: white; color: #333; border-bottom-left-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .message .meta { font-size: 0.75em; opacity: 0.7; margin-top: 5px; display: block; }
+        .input-area { background: white; padding: 20px; border-top: 1px solid #ddd; display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 24px; font-size: 16px; outline: none; }
+        input[type="text"]:focus { border-color: #1a73e8; }
+        button { background: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 24px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status-panel { background: white; padding: 15px 20px; border-bottom: 1px solid #ddd; font-size: 14px; display: flex; gap: 20px; color: #555; }
+        .loading { display: none; align-self: flex-start; background: transparent; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Chat Pool AI proxy</h2>
+        <div id="account-status">Loading stats...</div>
+    </div>
+
+    <div class="status-panel" id="detailed-status">
+        <!-- Stats will be populated here -->
+    </div>
+
+    <div class="chat-container" id="chat">
+        <div class="message bot">
+            Welcome to the Chat Pool! Type a message below. It will be routed through one of the active accounts.
+        </div>
+        <div id="loading" class="loading">Bot is typing... (this might take a while if it needs to login)</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+</html>

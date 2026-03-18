@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chatpool
+      POSTGRES_PASSWORD: chatpool_secret
+      POSTGRES_DB: chatpool
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+asyncpg://chatpool:chatpool_secret@db:5432/chatpool
+      IMAP_SERVER: imap.example.com
+      IMAP_PORT: 993
+      IMAP_USE_TLS: true
+      SERVICE_URL: https://the-service.com
+      HEADLESS: true
+    volumes:
+      - ./sessions:/app/sessions
+      - ./frontend:/app/frontend
+
+volumes:
+  pgdata:
