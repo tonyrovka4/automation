@@ -1,7 +1,7 @@
 import json
 import asyncio
 from playwright.async_api import async_playwright, Page
-from playwright_stealth import stealth_async
+from playwright_stealth import stealth
 from backend.browser_utils import (
     get_random_user_agent,
     get_stealth_headers,
@@ -22,7 +22,7 @@ class ChatWorker:
     async def _restore_session(self, context, account: Account) -> Page:
         """Восстанавливает сессию через cookies."""
         page = await context.new_page()
-        await stealth_async(page)
+        await stealth(page)
         
         if account.cookies_json:
             cookies = json.loads(account.cookies_json)

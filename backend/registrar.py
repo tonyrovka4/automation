@@ -1,7 +1,7 @@
 import asyncio
 import json
 from playwright.async_api import async_playwright, Page, BrowserContext
-from playwright_stealth import stealth_async
+from playwright_stealth import stealth
 from backend.browser_utils import (
     get_random_user_agent,
     get_stealth_headers,
@@ -121,7 +121,7 @@ class AccountRegistrar:
             context = await browser.new_context(**context_options)
             
             page = await context.new_page()
-            await stealth_async(page)
+            await stealth(page)
             
             try:
                 await self._login_flow(page, email_addr, email_pass)
