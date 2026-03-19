@@ -1,6 +1,15 @@
 import asyncio
 import json
 from playwright.async_api import async_playwright, Page, BrowserContext
+from playwright_stealth import stealth_async
+from backend.browser_utils import (
+    get_random_user_agent,
+    get_stealth_headers,
+    get_random_proxy,
+    human_delay,
+    human_type,
+    random_mouse_move
+)
 from backend.database import Account, AccountStatus, async_session
 from backend.imap_reader import imap_reader
 from backend.config import settings
@@ -17,23 +26,26 @@ class AccountRegistrar:
         """
         # 1. Открываем сервис
         await page.goto(settings.SERVICE_URL, wait_until="networkidle")
-        await page.wait_for_timeout(2000)
+        await random_mouse_move(page)
+        await human_delay(1500, 3000)
         
         # 2. Нажимаем "Start for free"
         start_btn = page.get_by_text("Start for free", exact=False)
+        await random_mouse_move(page)
         await start_btn.click()
         await page.wait_for_load_state("networkidle")
-        await page.wait_for_timeout(1500)
+        await human_delay(1000, 2000)
         
         # 3. Нажимаем "Login"
         login_btn = page.get_by_text("Login", exact=False)
+        await random_mouse_move(page)
         await login_btn.click()
-        await page.wait_for_timeout(2000)
+        await human_delay(1500, 2500)
         
         # 4. Вводим email
         # Адаптируй селектор под реальную форму
         email_input = page.locator("input[type='email'], input[placeholder*='email' i], input[name='email']").first
-        await email_input.fill(email_addr)
+        await human_type(page, email_input, email_addr)
         
         # 5. Нажимаем кнопку отправки (Send code / Continue / Submit)
         submit_btn = page.locator(
@@ -41,6 +53,7 @@ class AccountRegistrar:
             "button:has-text('Submit'), button:has-text('Get code'), "
             "button[type='submit']"
         ).first
+        await random_mouse_move(page)
         await submit_btn.click()
         
         print(f"[REG] Код отправлен на {email_addr}, ожидаю письмо...")
@@ -63,14 +76,14 @@ class AccountRegistrar:
             "input[placeholder*='code' i], input[placeholder*='verif' i], "
             "input[type='text'], input[name='code']"
         ).first
-        await code_input.fill(code)
+        await human_type(page, code_input, code)
         
         # Если код вводится по цифрам (6 отдельных инпутов)
         code_inputs = page.locator("input.code-input, input[data-index]")
         count = await code_inputs.count()
         if count == 6:
             for i, digit in enumerate(code):
-                await code_inputs.nth(i).fill(digit)
+                await human_type(page, code_inputs.nth(i), digit)
         
         # 8. Нажимаем Verify / Confirm
         verify_btn = page.locator(
@@ -79,10 +92,11 @@ class AccountRegistrar:
         ).first
         
         if await verify_btn.count() > 0:
+            await random_mouse_move(page)
             await verify_btn.click()
         
         # 9. Ждём загрузки интерфейса чата
-        await page.wait_for_timeout(5000)
+        await human_delay(4000, 6000)
         await page.wait_for_load_state("networkidle")
         
         print(f"[REG] ✅ Успешный вход для {email_addr}")
@@ -93,17 +107,21 @@ class AccountRegistrar:
         """Регистрирует/логинит один аккаунт и сохраняет сессию."""
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=settings.HEADLESS)
-            context = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/122.0.0.0 Safari/537.36"
-                ),
-                viewport={"width": 1280, "height": 720},
-                locale="en-US"
-            )
+            
+            context_options = {
+                "user_agent": get_random_user_agent(),
+                "viewport": {"width": 1280, "height": 720},
+                "locale": "en-US",
+                "extra_http_headers": get_stealth_headers()
+            }
+            proxy = get_random_proxy()
+            if proxy:
+                context_options["proxy"] = proxy
+                
+            context = await browser.new_context(**context_options)
             
             page = await context.new_page()
+            await stealth_async(page)
             
             try:
                 await self._login_flow(page, email_addr, email_pass)
@@ -128,6 +146,13 @@ class AccountRegistrar:
             except Exception as e:
                 print(f"[REG] ❌ Ошибка для {email_addr}: {e}")
                 
+                # Делаем скриншот для отладки
+                try:
+                    await page.screenshot(path=f"debug_error.png", full_page=True)
+                    print(f"[REG] Скриншот ошибки сохранен как debug_error.png")
+                except Exception as screenshot_error:
+                    print(f"[REG] Не удалось сделать скриншот: {screenshot_error}")
+
                 async with async_session() as session:
                     result = await session.execute(
                         select(Account).where(Account.email == email_addr)

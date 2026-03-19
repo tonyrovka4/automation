@@ -1,6 +1,15 @@
 import json
 import asyncio
 from playwright.async_api import async_playwright, Page
+from playwright_stealth import stealth_async
+from backend.browser_utils import (
+    get_random_user_agent,
+    get_stealth_headers,
+    get_random_proxy,
+    human_delay,
+    human_type,
+    random_mouse_move
+)
 from backend.database import Account, async_session, AccountStatus
 from backend.imap_reader import imap_reader
 from backend.config import settings
@@ -12,13 +21,16 @@ class ChatWorker:
     
     async def _restore_session(self, context, account: Account) -> Page:
         """Восстанавливает сессию через cookies."""
+        page = await context.new_page()
+        await stealth_async(page)
+        
         if account.cookies_json:
             cookies = json.loads(account.cookies_json)
             await context.add_cookies(cookies)
         
-        page = await context.new_page()
         await page.goto(settings.SERVICE_URL, wait_until="networkidle")
-        await page.wait_for_timeout(2000)
+        await random_mouse_move(page)
+        await human_delay(1500, 3000)
         
         return page
     
@@ -60,14 +72,17 @@ class ChatWorker:
         """Отправляет сообщение в чат сервиса и возвращает ответ."""
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=settings.HEADLESS)
-            context = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/122.0.0.0 Safari/537.36"
-                ),
-                viewport={"width": 1280, "height": 720}
-            )
+            
+            context_options = {
+                "user_agent": get_random_user_agent(),
+                "viewport": {"width": 1280, "height": 720},
+                "extra_http_headers": get_stealth_headers()
+            }
+            proxy = get_random_proxy()
+            if proxy:
+                context_options["proxy"] = proxy
+
+            context = await browser.new_context(**context_options)
             
             try:
                 page = await self._restore_session(context, account)
@@ -94,8 +109,9 @@ class ChatWorker:
                 input_area = page.locator(
                     "textarea, div[contenteditable='true']"
                 ).first
-                await input_area.fill(message)
-                await page.wait_for_timeout(500)
+                await human_type(page, input_area, message)
+                await random_mouse_move(page)
+                await human_delay(500, 1500)
                 
                 # Отправляем
                 send_btn = page.locator(

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     HEADLESS: bool = True
     MAX_CONCURRENT_BROWSERS: int = 3
     BROWSER_TIMEOUT: int = 60000
+    PROXY_LIST: str = "" # Comma-separated list of proxies (optional)
     
     # Пути
     SESSIONS_DIR: str = "./sessions"
