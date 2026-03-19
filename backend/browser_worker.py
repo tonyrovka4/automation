@@ -71,7 +71,15 @@ class ChatWorker:
     ) -> str:
         """Отправляет сообщение в чат сервиса и возвращает ответ."""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=settings.HEADLESS)
+            browser = await p.chromium.launch(
+                headless=settings.HEADLESS,
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ]
+            )
             
             context_options = {
                 "user_agent": get_random_user_agent(),

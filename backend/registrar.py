@@ -106,7 +106,15 @@ class AccountRegistrar:
     async def register_single(self, email_addr: str, email_pass: str) -> bool:
         """Регистрирует/логинит один аккаунт и сохраняет сессию."""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=settings.HEADLESS)
+            browser = await p.chromium.launch(
+                headless=settings.HEADLESS,
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ]
+            )
             
             context_options = {
                 "user_agent": get_random_user_agent(),
